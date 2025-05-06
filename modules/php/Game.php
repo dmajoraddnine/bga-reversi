@@ -20,12 +20,6 @@ namespace Bga\Games\reversitestA;
 
 require_once(APP_GAMEMODULE_PATH . "module/table/table.game.php");
 
-
-// require_once('./constants.inc.php');
-
-
-
-
 class Game extends \Table
 {
     // private static array $CARD_TYPES;
@@ -81,8 +75,7 @@ class Game extends \Table
      * This method is called only once, when a new game is launched. In this method, you must setup the game
      *  according to the game rules, so that the game is ready to be played.
      */
-    protected function setupNewGame($players, $options = [])
-    {
+    protected function setupNewGame($players, $options = []) {
         // Set the colors of the players with HTML color code. The default below is red/green/blue/orange/brown. The
         // number of colors defined here must correspond to the maximum number of players allowed for the gams.
         $gameinfos = $this->getGameinfos();
@@ -137,9 +130,6 @@ class Game extends \Table
             }
         }
         $sql .= implode(',', $sql_values);
-
-        // var_dump($sql);
-
         $this->DbQuery($sql);
 
 
@@ -172,8 +162,6 @@ class Game extends \Table
                 $sql .= "('".$turnedOver['x']."','".$turnedOver['y']."'),";
             }
             $sql .= "('$x','$y') ) ";
-
-            // var_dump('actPlayDisc $sql: ', $sql);
 
             $this->DbQuery($sql);
 
@@ -407,30 +395,6 @@ class Game extends \Table
             }
         }
 
-        // foreach ($board as $row => $colArray) {
-        //     foreach ($colArray as $col => $tokenPlayerID) {
-        //         // find existing pieces owned by specified player
-        //         $tokenPlayerID = $board[$row][$col];
-        //         if ($tokenPlayerID == $playerID) {
-        //             // check each of 8 directions from existing piece
-        //             foreach ($MOVE_DIRECTIONS as $vector) {
-        //                 $xForMove = $row + $vector[0];
-        //                 $yForMove = $col + $vector[1];
-        //                 $flippedDiscs = $this->getTurnedOverDiscs($board, $xForMove, $yForMove, $playerID);
-        //                 if (count($flippedDiscs) > 0) {
-        //                     if (!array_key_exists($xForMove, $resultMoves)) {
-        //                         $resultMoves[$xForMove] = array();
-        //                     }
-        //                     // add possible move for specified player to result-moves set
-        //                     $resultMoves[$xForMove][$yForMove] = $flippedDiscs;
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-
-        // var_dump('$resultMoves: ', $resultMoves);
-
         return $resultMoves;
     }
 
@@ -473,15 +437,13 @@ class Game extends \Table
         // Make next player in the order the active player
         $next_player_id = intval($this->activeNextPlayer());
 
+        $this->debug("[stNextPlayer] entered nextPlayer state");
+        $this->dump('new active player ID: ', $next_player_id);
+
         // Check if both player has at least 1 discs, and if there are free squares to play
         $player_to_discs = $this->getCollectionFromDb( "SELECT board_player, COUNT( board_x )
                                                        FROM board
                                                        GROUP BY board_player", true );
-
-        var_dump('$next_player_id: ', $next_player_id);
-        var_dump('$player_to_discs: ', $player_to_discs);
-        var_dump('$player_to_discs[\'\']: ', $player_to_discs['']);
-        var_dump('isset($player_to_discs[\'\']): ', isset($player_to_discs['']));
 
         if (!isset($player_to_discs[''])) {
             // empty-string index not present => there's no more free place on the board !
@@ -497,20 +459,19 @@ class Game extends \Table
         // Can this player play?
         $possibleMoves = $this->getPossibleMoves($next_player_id);
 
-        var_dump('$possibleMoves: ', $possibleMoves);
-
         if (count($possibleMoves) == 0) {
             // This player can't play
             // Can his opponent play ?
             $opponent_id = (int)$this->getUniqueValueFromDb("SELECT player_id FROM player WHERE player_id != '$next_player_id' ");
             $opponentPossibleMoves = $this->getPossibleMoves($opponent_id);
-            var_dump('$opponentPossibleMoves: ', $opponentPossibleMoves);
+            // var_dump('$opponentPossibleMoves: ', $opponentPossibleMoves);
             if (count($opponentPossibleMoves) == 0) {
                 // Nobody can move => end of the game
                 $this->gamestate->nextState('endGame');
             } else {
                 // => pass his turn
-                $this->gamestate->nextState('cantPlay');
+                $next_player_id = intval($this->activeNextPlayer());
+                $this->gamestate->nextState('playerTurn');
             }
         } else {
             // This player can play. Give him some extra time
@@ -530,23 +491,22 @@ class Game extends \Table
      * @param int $from_version
      * @return void
      */
-    public function upgradeTableDb($from_version)
-    {
-//       if ($from_version <= 1404301345)
-//       {
-//            // ! important ! Use DBPREFIX_<table_name> for all tables
-//
-//            $sql = "ALTER TABLE DBPREFIX_xxxxxxx ....";
-//            $this->applyDbUpgradeToAllDB( $sql );
-//       }
-//
-//       if ($from_version <= 1405061421)
-//       {
-//            // ! important ! Use DBPREFIX_<table_name> for all tables
-//
-//            $sql = "CREATE TABLE DBPREFIX_xxxxxxx ....";
-//            $this->applyDbUpgradeToAllDB( $sql );
-//       }
+    public function upgradeTableDb($from_version) {
+        //       if ($from_version <= 1404301345)
+        //       {
+        //            // ! important ! Use DBPREFIX_<table_name> for all tables
+        //
+        //            $sql = "ALTER TABLE DBPREFIX_xxxxxxx ....";
+        //            $this->applyDbUpgradeToAllDB( $sql );
+        //       }
+        //
+        //       if ($from_version <= 1405061421)
+        //       {
+        //            // ! important ! Use DBPREFIX_<table_name> for all tables
+        //
+        //            $sql = "CREATE TABLE DBPREFIX_xxxxxxx ....";
+        //            $this->applyDbUpgradeToAllDB( $sql );
+        //       }
     }
 
     /*
@@ -572,8 +532,6 @@ class Game extends \Table
 
 
         $result['board'] = $this->getBoardPieces();
-
-        // var_dump($result);
 
         return $result;
     }

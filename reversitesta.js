@@ -277,10 +277,12 @@ function (dojo, declare) {
                   your reversitesta.game.php file.
         
         */
-        setupNotifications: function()
-        {
+        setupNotifications: function() {
             console.log( 'notifications subscriptions setup' );
-            
+
+            // automatically listen to the notifications, based on the `notif_xxx` function on this class.
+            this.bgaSetupPromiseNotifications();
+
             // TODO: here, associate your game notifications with local methods
             
             // Example 1: standard notification handling
@@ -296,19 +298,49 @@ function (dojo, declare) {
         
         // TODO: from this point and below, you can write your game notifications handling methods
         
-        /*
-        Example:
-        
-        notif_cardPlayed: function( notif )
-        {
-            console.log( 'notif_cardPlayed' );
-            console.log( notif );
-            
-            // Note: notif.args contains the arguments specified during you "notifyAllPlayers" / "notifyPlayer" PHP call
-            
-            // TODO: play the card in the user interface.
-        },    
-        
-        */
+        notif_playDisc: async function(args) {
+            // Remove current possible moves (makes the board more clear)
+            document.querySelectorAll('.possibleMove').forEach(div => div.classList.remove('possibleMove'));
+
+            await this.addDiscOnBoard(args.x, args.y, args.player_id);
+        },
+
+        notif_turnOverDiscs: async function(args) {
+            // Get the color of the player who is returning the discs
+            const targetColor = this.gamedatas.players[args.player_id].color;
+
+            // wait for the animations of all turned discs to be over before considering the notif done
+            await Promise.all(
+                args.turnedOver.map(disc => this.animateTurnOverDisc(disc, targetColor))
+            );
+        },
+
+        animateTurnOverDisc: async function(disc, targetColor) {
+            const discDiv = document.getElementById(`disc_${disc.x}${disc.y}`);
+
+            if (!this.bgaAnimationsActive()) {
+                // do not play animations if the animations aren't activated (fast replay mode)
+                discDiv.dataset.color = targetColor;
+                return Promise.resolve();
+            }
+
+            // Make the disc blink 2 times
+            const anim = dojo.fx.chain( [
+                dojo.fadeOut( {
+                                node: discDiv,
+                                onEnd: () => discDiv.dataset.color = targetColor,
+                            } ),
+                dojo.fadeIn( { node: discDiv } )
+            ] ); // end of dojo.fx.chain
+
+            await this.bgaPlayDojoAnimation(anim);
+        },
+
+        notif_newScores: async function(args) {
+            for (const player_id in args.scores) {
+                const newScore = args.scores[ player_id ];
+                this.scoreCtrl[player_id].toValue(newScore);
+            }
+        }
    });             
 });

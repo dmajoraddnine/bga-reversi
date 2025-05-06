@@ -87,7 +87,6 @@ $machinestates = [
         "updateGameProgression" => true,
         "transitions" => [
             "playerTurn" => ST_PLAYER_TURN,
-            "cantPlay" => ST_PLAYER_TURN,
             "endGame" => ST_END_GAME
         ]
     ],
